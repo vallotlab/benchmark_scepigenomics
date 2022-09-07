@@ -1,12 +1,10 @@
 suppressPackageStartupMessages({
   library(argparse)
   library(Seurat)
-  library(Signac)
   library(SingleCellExperiment)
   library(scran)
   library(scater)
   library(Matrix)
-  library(ChromSCape)
   library(stringr)
 })
 
@@ -41,11 +39,11 @@ save_sce <- function(path, sce) {
 format_output_path <- function(input_path, sampling) {
   to_parse <- str_split(input_path, '/')[[1]]
   return(file.path(
-    to_parse[[1]],
-    to_parse[[2]],
-    to_parse[[3]],
+    '/home/gamazeps/data/matrices',
+    to_parse[[6]], # dataset
+    to_parse[[7]], # mark
     sampling,
-    to_parse[[5]]
+    to_parse[[9]]  # feature engineeing
   ))
 }
 
@@ -61,12 +59,12 @@ n_cells = ncol(sce)
 # > set.seed(0)
 # > rnorm(1)
 #   1.26295428488079
-for (i in seq(1000, n_cells, by=1000)) {
+for (i in seq(500, n_cells, by=500)) {
   # The seed is changed at each iteration because it would otherwise sample the same cells.
   #
   set.seed(i)
   sampled_sce <- sce[, sample(ncol(sce), i, replace = FALSE)]
-  selection <- paste0('sampled_cell_', i, sep='')
+  selection <- paste0('sampled_cell_n_', i, sep='')
   path <- format_output_path(args$input_path, selection)
   save_sce(path, sampled_sce)
 }
