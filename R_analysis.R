@@ -240,26 +240,26 @@ process_signac <- function(data_path, ndims = 50) {
   return(sce)
 }
 
-lsi <- process_lsi(args$input_path, 10)
+lsi <- process_lsi(args$input_path, 50)
 write.csv(reducedDim(lsi, "lsi"),
-          file.path(args$output_path, "LSI.csv"))
+          file.path(args$output_path, "Chromscape_LSI_50.csv"))
 rm(lsi)
 gc()
-print("Done with LSI")
+print("Done with LSI 50")
 
-#lsi <- process_lsi(args$input_path, 50)
-#write.csv(reducedDim(lsi, "lsi"),
-#          file.path(args$output_path, "Chromscape_LSI_50.csv"))
-#rm(lsi)
-#gc()
-#print("Done with LSI 50")
-#
-#lsi <- process_white_lsi(args$input_path, 10)
-#write.csv(reducedDim(lsi, "lsi"),
-#          file.path(args$output_path, "Chromscape_white_LSI.csv"))
-#rm(lsi)
-#gc()
-#print("Done with white LSI")
+lsi <- process_white_lsi(args$input_path, 10)
+write.csv(reducedDim(lsi, "lsi"),
+          file.path(args$output_path, "Chromscape_white_LSI.csv"))
+rm(lsi)
+gc()
+print("Done with white LSI")
+
+signac <- process_signac(args$input_path, ndim=10)
+write.csv(reducedDim(signac, "LSI"),
+          file.path(args$output_path, "Signac_10.csv"))
+rm(signac)
+gc()
+print("Done with signac 10")
 
 snap <- process_snapatac(args$input_path)
 write.csv(reducedDim(snap, "SnapATAC"),
@@ -268,19 +268,19 @@ rm(snap)
 gc()
 print("Done with SnapATAC")
 
+lsi <- process_lsi(args$input_path, 10)
+write.csv(reducedDim(lsi, "lsi"),
+          file.path(args$output_path, "LSI.csv"))
+rm(lsi)
+gc()
+print("Done with LSI")
+
 signac <- process_signac(args$input_path)
 write.csv(reducedDim(signac, "LSI"),
           file.path(args$output_path, "Signac.csv"))
 rm(signac)
 gc()
 print("Done with signac")
-
-#signac <- process_signac(args$input_path, ndim=10)
-#write.csv(reducedDim(signac, "LSI"),
-#          file.path(args$output_path, "Signac_10.csv"))
-#rm(signac)
-#gc()
-#print("Done with signac 10")
 
 cis <- process_cistopic(args$input_path)
 write.csv(reducedDim(cis, "cisTopic"),
