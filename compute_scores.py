@@ -154,7 +154,8 @@ def evaluate_methods(gt_path: os.PathLike,
     adata = process_adt(adata)
     #print(adata.obsm_keys)
     #print(adata.obsm.dim_names) # type: ignore
-    adata.obsm.dim_names = adata.obs_names # type: ignore
+    #print(adata.obs_names) # type: ignore
+    #adata.obsm.dim_names = adata.obs_names # type: ignore
     logging.info('Built the ADT matrix')
 
   if binsize[-1] == 'k' and binsize != 'PseudoBulk':
@@ -163,6 +164,8 @@ def evaluate_methods(gt_path: os.PathLike,
   res = []
   for fraction in fractions:
     k = round(adata.n_obs * fraction)
+    if k == 0:
+      continue
     nng_rna = kneighbors_graph(
         adata.obsm['X_pca'], n_neighbors=k).todense().astype('bool')
     for name, emb in embeddings.items():
