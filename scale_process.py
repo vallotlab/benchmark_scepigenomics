@@ -17,6 +17,7 @@ import scale.utils
 import scipy.io
 import scipy.sparse
 import tensorflow as tf
+import time
 import torch
 from torch.utils.data import DataLoader
 
@@ -136,9 +137,10 @@ def main(argv: Sequence[str]) -> None:
 
   dims = [input_dim, FLAGS.latent, FLAGS.encode_dim, FLAGS.decode_dim]
   model = SCALE(dims, n_centroids=FLAGS.n_centroids)
-  print(model)
+  logging.info(model)
 
-  print('\n## Training Model ##')
+  before = time.time()
+  logging.info('\n## Training Model ##')
   model.init_gmm_params(testloader)
   model.fit(
       trainloader,
@@ -150,6 +152,8 @@ def main(argv: Sequence[str]) -> None:
       outdir=FLAGS.output_path)
 
   adata.obsm['latent'] = model.encodeBatch(testloader, device=device, out='z')
+  delta = time.time() - before
+  print(f'Time to run SCALE {FLAGS.input_path} {delta}')
 
   dr = pd.DataFrame(adata.obsm['latent'], index=adata.obs_names)
 

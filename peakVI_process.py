@@ -10,6 +10,7 @@ import pandas as pd
 import scipy.io
 import scipy.sparse
 import scvi
+import time
 import tensorflow as tf
 
 
@@ -47,9 +48,14 @@ def main(argv: Sequence[str]) -> None:
 
   adata = create_anndata(FLAGS.input_path)
   scvi.model.PEAKVI.setup_anndata(adata)
+
+  before = time.time()
   vae = scvi.model.PEAKVI(adata)
   vae.train()
   dr = pd.DataFrame(vae.get_latent_representation(), index=adata.obs_names)
+  delta = time.time() - before
+
+  print(f'Time to run PeakVI {FLAGS.input_path} {delta}')
 
   tf.io.gfile.makedirs(FLAGS.output_path)
   with tf.io.gfile.GFile(os.path.join(FLAGS.output_path, 'peakVI.csv'), 'w') as f:
