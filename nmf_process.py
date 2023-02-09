@@ -13,6 +13,7 @@ import scipy.sparse
 import sklearn.decomposition
 import sklearn.feature_extraction.text
 import tensorflow as tf
+import time
 
 
 FLAGS = flags.FLAGS
@@ -48,17 +49,23 @@ def main(argv: Sequence[str]) -> None:
     raise app.UsageError('Too many command-line arguments.')
 
   adata = create_anndata(FLAGS.input_path)
+  before = time.time()
   nmf = sklearn.decomposition.NMF(n_components=10, init='random', random_state=0)
   adata.obsm['nmf'] = nmf.fit_transform(adata.X)
+  delta = time.time() - before
   dr = pd.DataFrame(adata.obsm['nmf'], index=adata.obs_names)
+  print(f'Time to run NMF {FLAGS.input_path} {delta}')
   tf.io.gfile.makedirs(FLAGS.output_path)
   with tf.io.gfile.GFile(os.path.join(FLAGS.output_path, 'nmf.csv'), 'w') as f:
     dr.to_csv(f)
   logging.info('Done with regular NMF')
 
+  before = time.time()
   transformer = sklearn.feature_extraction.text.TfidfTransformer()
   tfidf = transformer.fit_transform(adata.X)
   adata.obsm['tfidf_nmf'] = nmf.fit_transform(tfidf)
+  delta = time.time() - before
+  print(f'Time to run TFIDF-NMF {FLAGS.input_path} {delta}')
   dr = pd.DataFrame(adata.obsm['tfidf_nmf'], index=adata.obs_names)
   with tf.io.gfile.GFile(os.path.join(FLAGS.output_path, 'tfidf_nmf.csv'), 'w') as f:
     dr.to_csv(f)
