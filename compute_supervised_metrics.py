@@ -24,7 +24,6 @@ FLAGS = flags.FLAGS
 flags.DEFINE_string('gt_path', None, 'Path to the scRNA-seq ground truth.')
 flags.DEFINE_string('embeddings_path', None, 'Path to the embeddings folder.')
 flags.DEFINE_string('output_path', None, 'Directory where to write the scores.')
-flags.DEFINE_string('mode', None, '')
 
 FILES = {
     'LSI.csv': 'Chromscape_LSI',
@@ -37,10 +36,12 @@ FILES = {
     'cisTopic.csv': 'cisTopic',
     'peakVI.csv': 'PeakVI',
     'SCALE.csv': 'SCALE',
+    'nmf.csv': 'NMF',
+    'tfidf_nmf.csv': 'TFIDF-NMF',
 }
 
 
-def create_anndata(path: os.PathLike) -> anndata.AnnData:
+def create_anndata(path: os.PathLike, source: str) -> anndata.AnnData:
   """Creates anndata object from raw data.
 
   Args:
@@ -49,6 +50,18 @@ def create_anndata(path: os.PathLike) -> anndata.AnnData:
   Returns:
     anndata object for the experiment.
   """
+  if source == 'scCutTagPro_Zhang_2021':
+    with tf.io.gfile.GFile(os.path.join(path, 'adt.csv'), mode='r') as f:
+      adt = pd.read_csv(f, index_col=0).transpose()
+    adata = anndata.AnnData(adt)
+    with tf.io.gfile.GFile(os.path.join(path, 'l1.csv'), mode='r') as f:
+      labels = pd.read_csv(f, sep=',', index_col=0)['x']
+    labels.index = adata.obs_names
+    adata.obs['Annotation'] = labels
+    adata.obs_names = adata.obs_names.map(lambda x: '-'.join(x.split('.')))
+    return adata
+
+
   with tf.io.gfile.GFile(os.path.join(path, 'matrix.mtx'), mode='rb') as f:
     matrix = scipy.io.mmread(f)
   matrix = scipy.sparse.csr_matrix(matrix)
@@ -57,12 +70,25 @@ def create_anndata(path: os.PathLike) -> anndata.AnnData:
   with tf.io.gfile.GFile(os.path.join(path, 'barcodes.tsv'), mode='r') as f:
     barcodes = pd.read_csv(f, sep='\t', header=None)[0]
   adata.obs_names = barcodes
-  with tf.io.gfile.GFile(os.path.join(path, 'genes.tsv'), mode='r') as f:
+
+  if source == 'PairedTag_Zhu_2021':
+    features_fp = 'genes.tsv'
+  if source == 'scChIP_Grosselin_2019':
+    features_fp = 'bins.tsv'
+  with tf.io.gfile.GFile(os.path.join(path, features_fp), mode='r') as f:
     bins = pd.read_csv(f, sep='\t', header=None)[0]
   adata.var_names = bins
-  with tf.io.gfile.GFile(os.path.join(path, 'meta.tsv'), mode='r') as f:
-    meta = pd.read_csv(f, sep='\t', index_col='Cell_ID')
-  adata.obs = meta
+
+  if source == 'PairedTag_Zhu_2021':
+    with tf.io.gfile.GFile(os.path.join(path, 'meta.tsv'), mode='r') as f:
+      meta = pd.read_csv(f, sep='\t', index_col='Cell_ID')
+    adata.obs = meta
+  if source == 'scChIP_Grosselin_2019':
+    with tf.io.gfile.GFile(os.path.join(path, 'annot.txt'), mode='r') as f:
+      labels = pd.read_csv(f, sep='\t', header=None)[0]
+    labels.index = adata.obs_names
+    adata.obs['Annotation'] = labels
+
   return adata
 
 
@@ -71,9 +97,8 @@ def evaluate_methods(gt_path: os.PathLike,
                      source: str,
                      mark: str,
                      feature_selection: str,
-                     binsize: str,
-                     mode: str = 'RNA'):
-  """Computes neighborhood score.
+                     binsize: str):
+  """Computes supervised metrics.
 
   Args:
     gt_path: Path to the 10X RNA formatted data and annotation.
@@ -82,10 +107,9 @@ def evaluate_methods(gt_path: os.PathLike,
     mark: Histone mark target.
     feature_selection: Feature selection used before DR.
     binsize: Feature engineering method used to generate the matrix.
-    fractions: Percentage of the cells to use for kNN graph.
 
   Returns:
-    Neighborhood score for the methods.
+    Returns pd.DataFrame containing the supervised metrics.
 
   """
   idx = None
@@ -109,9 +133,9 @@ def evaluate_methods(gt_path: os.PathLike,
     break
 
   # get labels
-  adata = create_anndata(gt_path)
+  adata = create_anndata(gt_path, source)
   adata = adata[idx, :]
-  logging.info('Built the RNA matrix')
+  logging.info('Built the gt matrix')
 
   if binsize[-1] == 'k' and binsize != 'PseudoBulk':
     binsize = int(binsize[:-1])
@@ -174,7 +198,6 @@ def main(argv: Sequence[str]) -> None:
       mark=mark,
       feature_selection=feature_selection,
       binsize=binsize,
-      mode=FLAGS.mode,
   )
 
   if scores is None:
