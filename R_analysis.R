@@ -198,7 +198,7 @@ process_lsi <- function(data_path, dim) {
   sce <- create_sce(data_path)
   start <- Sys.time()
   pca_emb <- pca(t(assay(TFIDF(sce), "normcounts")), dim)[, -1]
-  delta <- Sys.time() - start
+  delta <- as.numeric(Sys.time() - start, units = "secs")
   print(paste("Time to run ChromSCape_LSI", data_path, delta))
   reducedDim(sce, "lsi") <- pca_emb
   return(sce)
@@ -208,7 +208,7 @@ process_white_lsi <- function(data_path) {
   sce <- create_sce(data_path)
   start <- Sys.time()
   pca_emb <- white_pca(t(assay(TFIDF(sce), "normcounts")), 10)[, -1]
-  delta <- Sys.time() - start
+  delta <- as.numeric(Sys.time() - start, units = "secs")
   print(paste("Time to run ChromSCape_white_LSI", data_path, delta))
   reducedDim(sce, "lsi") <- pca_emb
   return(sce)
@@ -218,7 +218,7 @@ process_pca <- function(data_path) {
   sce <- create_sce(data_path)
   start <- Sys.time()
   pca_emb <- pca(t(assay(tpm_norm(sce), "normcounts")), 10)[, -1]
-  delta <- Sys.time() - start
+  delta <- as.numeric(Sys.time() - start, units = "secs")
   print(paste("Time to run ChromSCape_PCA", data_path, delta))
   reducedDim(sce, "pca") <- pca_emb
   return(sce)
@@ -229,7 +229,7 @@ process_snapatac <- function(data_path) {
   start <- Sys.time()
   tmp <- run_SnapATAC_normalize(sce)
   fm_SnapATAC <- run_SnapATAC(tmp, num_pcs = 10)
-  delta <- Sys.time() - start
+  delta <- as.numeric(Sys.time() - start, units = "secs")
   print(paste("Time to run SnapATAC", data_path, delta))
   reducedDim(sce, "SnapATAC") <- t(fm_SnapATAC)
   return(sce)
@@ -239,7 +239,7 @@ process_cistopic <- function(data_path) {
   sce <- create_sce(data_path)
   start <- Sys.time()
   cis_emb <- run_cisTopic(sce)
-  delta <- Sys.time() - start
+  delta <- as.numeric(Sys.time() - start, units = "secs")
   print(paste("Time to run cisTopic", data_path, delta))
   reducedDim(sce, "cisTopic") <- cis_emb
   return(sce)
@@ -252,18 +252,18 @@ process_signac <- function(data_path, ndims = 50) {
   dat <- RunTFIDF(dat)
   dat <- FindTopFeatures(dat, min.cutoff = "q0")
   dat <- RunSVD(dat, n = ndims)
-  delta <- Sys.time() - start
+  delta <- as.numeric(Sys.time() - start, units = "secs")
   print(paste("Time to run Signac", data_path, delta))
   sce <- as.SingleCellExperiment(dat)
   return(sce)
 }
 
-lsi <- process_lsi(args$input_path, 50)
-write.csv(reducedDim(lsi, "lsi"),
-          file.path(args$output_path, "Chromscape_LSI_50.csv"))
-rm(lsi)
-gc()
-print("Done with LSI 50")
+#lsi <- process_lsi(args$input_path, 50)
+#write.csv(reducedDim(lsi, "lsi"),
+#          file.path(args$output_path, "Chromscape_LSI_50.csv"))
+#rm(lsi)
+#gc()
+#print("Done with LSI 50")
 
 #lsi <- process_white_lsi(args$input_path, 10)
 #write.csv(reducedDim(lsi, "lsi"),
