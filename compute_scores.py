@@ -23,6 +23,7 @@ flags.DEFINE_string('gt_path', None, 'Path to the scRNA-seq ground truth.')
 flags.DEFINE_string('embeddings_path', None, 'Path to the embeddings folder.')
 flags.DEFINE_string('output_path', None, 'Directory where to write the scores.')
 flags.DEFINE_string('mode', None, '')
+flags.DEFINE_boolean('all', False, 'Whether to run all feature engineerings')
 
 FILES = {
     'LSI.csv': 'Chromscape_LSI',
@@ -35,6 +36,8 @@ FILES = {
     'cisTopic.csv': 'cisTopic',
     'peakVI.csv': 'PeakVI',
     'SCALE.csv': 'SCALE',
+    'nmf.csv': 'NMF',
+    'tfidf_nmf.csv': 'TFIDF-NMF',
 }
 
 
@@ -103,7 +106,8 @@ def evaluate_methods(gt_path: os.PathLike,
                      source: str,
                      mark: str,
                      feature_selection: str,
-                     binsize: str,
+                     binsizes: Sequence[str],
+                     out_paths: Sequence[str],
                      fractions: Sequence[float],
                      mode: str = 'RNA'):
   """Computes neighborhood score.
@@ -114,7 +118,8 @@ def evaluate_methods(gt_path: os.PathLike,
     source: Dataset of origin.
     mark: Histone mark target.
     feature_selection: Feature selection used before DR.
-    binsize: Feature engineering method used to generate the matrix.
+    binsize: Feature engineering methods used to generate the matrix.
+    out_paths: Paths to the scores.
     fractions: Percentage of the cells to use for kNN graph.
 
   Returns:
@@ -123,66 +128,83 @@ def evaluate_methods(gt_path: os.PathLike,
   """
   idx = None
   embeddings = dict()
+  adata = None
 
-  for file, name in FILES.items():
-    if tf.io.gfile.exists(os.path.join(embeddings_path, file)):
-      with tf.io.gfile.GFile(
-          os.path.join(embeddings_path, file), mode='r') as f:
-        embeddings[name] = pd.read_csv(f, index_col=0)
 
-  if not embeddings:
-    logging.info('There are no embeddings available.')
-    return None
 
-  # We take the ids of the cells in the sample from an embeddings.
-  # The fact that all embeddings are on the same cells is enforced when they are
-  # added in the obsm field.
-  for _, emb in embeddings.items():
-    idx = emb.index
-    break
+  nng_rna = dict()
 
-  if mode == 'RNA':
-    adata = create_anndata(gt_path)
-    adata = adata[idx, :]
-    logging.info('Starting to process the RNA matrix')
-    adata = process_rna(adata)
-    logging.info('Built the RNA matrix')
-  elif mode == 'ADT':
-    adata = create_adt_h5a(gt_path)
-    adata = adata[idx, :]
-    logging.info('Starting to process the ADT matrix')
-    adata = process_adt(adata)
-    #print(adata.obsm_keys)
-    #print(adata.obsm.dim_names) # type: ignore
-    #print(adata.obs_names) # type: ignore
-    #adata.obsm.dim_names = adata.obs_names # type: ignore
-    logging.info('Built the ADT matrix')
+  for binsize, out_path in zip(binsizes, out_paths):
+    for file, name in FILES.items():
+      if tf.io.gfile.exists(os.path.join(embeddings_path, binsize, file)):
+        with tf.io.gfile.GFile(
+            os.path.join(embeddings_path, binsize, file), mode='r') as f:
+          embeddings[name] = pd.read_csv(f, index_col=0)
 
-  if binsize[-1] == 'k' and binsize != 'PseudoBulk':
-    binsize = int(binsize[:-1])
+    if binsize[-1] == 'k' and ((binsize != 'PseudoBulk') and (binsize != 'SicerPseudoBulk')):
+      binsize = int(binsize[:-1])
 
-  res = []
-  for fraction in fractions:
-    k = round(adata.n_obs * fraction)
-    if k == 0:
+    if not embeddings:
+      logging.info('There are no embeddings available.')
       continue
-    nng_rna = kneighbors_graph(
-        adata.obsm['X_pca'], n_neighbors=k).todense().astype('bool')
-    for name, emb in embeddings.items():
-      adata.obsm[name] = emb  # Enforces all embeddings being on the same cells.
-      score = compute_mutual_mixing(nng_rna, adata.obsm[name], k)
-      res.append({
-          'Method': name,
-          'K': k,
-          'fraction': fraction,
-          'frac. shared neighbors': score,
-          'Mark': mark,
-          'Dataset': source,
-          'binsize': binsize,
-          'feature_selection': feature_selection,
-      })
-      logging.info('Done with %s', name)
-  return pd.DataFrame(res)
+
+    if not adata:
+      # We take the ids of the cells in the sample from an embeddings.
+      # The fact that all embeddings are on the same cells is enforced when they are
+      # added in the obsm field.
+      for _, emb in embeddings.items():
+        idx = emb.index
+        break
+
+      if mode == 'RNA':
+        adata = create_anndata(gt_path)
+        adata = adata[idx, :]
+        logging.info('Starting to process the RNA matrix')
+        adata = process_rna(adata)
+        logging.info('Built the RNA matrix')
+      elif mode == 'ADT':
+        adata = create_adt_h5a(gt_path)
+        adata = adata[idx, :]
+        logging.info('Starting to process the ADT matrix')
+        adata = process_adt(adata)
+        #print(adata.obsm_keys)
+        #print(adata.obsm.dim_names) # type: ignore
+        #print(adata.obs_names) # type: ignore
+        #adata.obsm.dim_names = adata.obs_names # type: ignore
+        logging.info('Built the ADT matrix')
+
+    res = []
+    for fraction in fractions:
+      k = round(adata.n_obs * fraction)
+      if k == 0:
+        continue
+      if k not in nng_rna:
+        nng_rna[k] = kneighbors_graph(
+            adata.obsm['X_pca'], n_neighbors=k).todense().astype('bool')
+      for name, emb in embeddings.items():
+        adata.obsm[name] = emb  # Enforces all embeddings being on the same cells.
+        score = compute_mutual_mixing(nng_rna[k], adata.obsm[name], k)
+        res.append({
+            'Method': name,
+            'K': k,
+            'fraction': fraction,
+            'frac. shared neighbors': score,
+            'Mark': mark,
+            'Dataset': source,
+            'binsize': binsize,
+            'feature_selection': feature_selection,
+        })
+        logging.info('Done with %s', name)
+
+    if len(res) == 0:
+      continue
+
+    scores = pd.DataFrame(res)
+    tf.io.gfile.makedirs(out_path)
+    with tf.io.gfile.GFile(
+        os.path.join(out_path, 'scores.csv'), mode='w') as f:
+      scores.to_csv(f)
+    logging.info('Done with %s', binsize)
 
 
 def main(argv: Sequence[str]) -> None:
@@ -190,29 +212,35 @@ def main(argv: Sequence[str]) -> None:
     raise app.UsageError('Too many command-line arguments.')
 
   to_parse = FLAGS.embeddings_path.split('/')
-  binsize = to_parse[-1]
-  feature_selection = to_parse[-2]
-  mark = to_parse[-3]
-  source = to_parse[-4]
+  if FLAGS.all:
+    binsizes = os.listdir(FLAGS.embeddings_path)
+    out_paths = [os.path.join(FLAGS.output_path, bs) for bs in binsizes]
+    embeddings_path = FLAGS.embeddings_path
+    feature_selection = to_parse[-1]
+    mark = to_parse[-2]
+    source = to_parse[-3]
+    logging.info(f'{feature_selection}, {mark}, {source}')
+    logging.info(binsizes)
+    logging.info(out_paths)
+  else:
+    binsizes = [to_parse[-1]]
+    out_paths = [FLAGS.output_path]
+    embeddings_path = os.path.join(to_parse[:-1])
+    feature_selection = to_parse[-2]
+    mark = to_parse[-3]
+    source = to_parse[-4]
 
   scores = evaluate_methods(
       gt_path=FLAGS.gt_path,
-      embeddings_path=FLAGS.embeddings_path,
+      embeddings_path=embeddings_path,
       source=source,
       mark=mark,
       feature_selection=feature_selection,
-      binsize=binsize,
+      binsizes=binsizes,
+      out_paths=out_paths,
       fractions=_FRACTIONS,
       mode=FLAGS.mode,
   )
-
-  if scores is None:
-    return
-
-  tf.io.gfile.makedirs(FLAGS.output_path)
-  with tf.io.gfile.GFile(
-      os.path.join(FLAGS.output_path, 'scores.csv'), mode='w') as f:
-    scores.to_csv(f)
 
 
 if __name__ == '__main__':
