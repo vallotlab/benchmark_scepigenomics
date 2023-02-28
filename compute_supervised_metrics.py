@@ -61,6 +61,13 @@ def create_anndata(path: os.PathLike, source: str) -> anndata.AnnData:
     adata.obs_names = adata.obs_names.map(lambda x: '-'.join(x.split('.')))
     return adata
 
+  if source == 'scChIP_Marsolier_2022':
+    with tf.io.gfile.GFile(os.path.join(path, 'barcodes.tsv'), mode='r') as f:
+      barcodes = pd.read_csv(f, sep='\t', header=None)[0]
+    adata = anndata.AnnData(np.zeros((barcodes.size, 1)))
+    adata.obs_names = barcodes
+    adata.obs['Annotation'] = adata.obs_names.map(lambda x: x.split('_')[2][:-1])
+    return adata
 
   with tf.io.gfile.GFile(os.path.join(path, 'matrix.mtx'), mode='rb') as f:
     matrix = scipy.io.mmread(f)
@@ -88,6 +95,7 @@ def create_anndata(path: os.PathLike, source: str) -> anndata.AnnData:
       labels = pd.read_csv(f, sep='\t', header=None)[0]
     labels.index = adata.obs_names
     adata.obs['Annotation'] = labels
+
 
   return adata
 
@@ -137,7 +145,7 @@ def evaluate_methods(gt_path: os.PathLike,
   adata = adata[idx, :]
   logging.info('Built the gt matrix')
 
-  if binsize[-1] == 'k' and binsize != 'PseudoBulk':
+  if binsize[-1] == 'k' and binsize != 'MacsPseudoBulk':
     binsize = int(binsize[:-1])
 
   res = []
