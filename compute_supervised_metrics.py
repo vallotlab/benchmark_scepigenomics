@@ -150,28 +150,42 @@ def evaluate_methods(gt_path: os.PathLike,
 
   res = []
   for name, emb in embeddings.items():
+    logging.info('Starting with %s', name)
     adata.obsm[name] = emb  # Enforces all embeddings being on the same cells.
 
     silhouette = sklearn.metrics.silhouette_score(adata.obsm[name],
                                                   adata.obs['Annotation'])
 
-    kmeans = sklearn.cluster.KMeans(
-        n_clusters=len(adata.obs['Annotation'].unique()), random_state=0).fit(adata.obsm[name])
+    kmeans = sklearn.cluster.KMeans(n_clusters=len(adata.obs['Annotation'].unique()),
+                                    random_state=0).fit(adata.obsm[name])
     adata.obs['predicted_clusters'] = kmeans.labels_
 
     kmeans_ari = sklearn.metrics.adjusted_rand_score(adata.obs['Annotation'],
-                                              adata.obs['predicted_clusters'])
-    kmeans_ami = sklearn.metrics.adjusted_mutual_info_score(
-        adata.obs['Annotation'], adata.obs['predicted_clusters'])
+                                                     adata.obs['predicted_clusters'])
+    kmeans_ami = sklearn.metrics.adjusted_mutual_info_score(adata.obs['Annotation'],
+                                                            adata.obs['predicted_clusters'])
+
+    cosine = sklearn.cluster.AgglomerativeClustering(
+            linkage='average',
+            affinity='cosine',
+            n_clusters=len(adata.obs['Annotation'].unique())
+            ).fit(adata.obsm[name])
+    adata.obs['predicted_clusters'] = cosine.labels_
+
+    cosine_ari = sklearn.metrics.adjusted_rand_score(adata.obs['Annotation'],
+                                                     adata.obs['predicted_clusters'])
+    cosine_ami = sklearn.metrics.adjusted_mutual_info_score(adata.obs['Annotation'],
+                                                            adata.obs['predicted_clusters'])
 
     ward = sklearn.cluster.AgglomerativeClustering(
-        n_clusters=len(adata.obs['Annotation'].unique())).fit(adata.obsm[name])
+            n_clusters=len(adata.obs['Annotation'].unique())
+            ).fit(adata.obsm[name])
     adata.obs['predicted_clusters'] = ward.labels_
 
     ward_ari = sklearn.metrics.adjusted_rand_score(adata.obs['Annotation'],
-                                              adata.obs['predicted_clusters'])
-    ward_ami = sklearn.metrics.adjusted_mutual_info_score(
-        adata.obs['Annotation'], adata.obs['predicted_clusters'])
+                                                   adata.obs['predicted_clusters'])
+    ward_ami = sklearn.metrics.adjusted_mutual_info_score(adata.obs['Annotation'],
+                                                          adata.obs['predicted_clusters'])
 
     res.append({
         'Method': name,
@@ -183,6 +197,8 @@ def evaluate_methods(gt_path: os.PathLike,
         'kmeans_ari': kmeans_ari,
         'ward_ami': ward_ami,
         'ward_ari': ward_ari,
+        'cosine_ami': cosine_ami,
+        'cosine_ari': cosine_ari,
         'silhouette': silhouette,
     })
     logging.info('Done with %s', name)
