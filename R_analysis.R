@@ -182,7 +182,7 @@ run_cisTopic <- function(se) {
     cisTopicObject <- runWarpLDAModels(cisTopicObject,
                                        topic = c(2, 5:15, 20, 25),
                                        seed = 2019,
-                                       nCores = 2,
+                                       nCores = 12,
                                        iterations = 150,
                                        addModels = FALSE)
     cisTopicObject <- selectModel(cisTopicObject)
@@ -217,7 +217,7 @@ process_white_lsi <- function(data_path) {
 process_pca <- function(data_path) {
   sce <- create_sce(data_path)
   start <- Sys.time()
-  pca_emb <- pca(t(assay(tpm_norm(sce), "normcounts")), 10)[, -1]
+  pca_emb <- pca(t(assay(tpm_norm(sce), "normcounts")), 10)
   delta <- as.numeric(Sys.time() - start, units = "secs")
   print(paste("Time to run ChromSCape_PCA", data_path, delta))
   reducedDim(sce, "pca") <- pca_emb
@@ -279,37 +279,37 @@ process_signac <- function(data_path, ndims = 50) {
 #gc()
 #print("Done with signac 10")
 
-snap <- process_snapatac(args$input_path)
-write.csv(reducedDim(snap, "SnapATAC"),
-          file.path(args$output_path, "SnapATAC.csv"))
-rm(snap)
-gc()
-print("Done with SnapATAC")
-
-lsi <- process_lsi(args$input_path, 10)
-write.csv(reducedDim(lsi, "lsi"),
-          file.path(args$output_path, "LSI.csv"))
-rm(lsi)
-gc()
-print("Done with LSI")
-
-signac <- process_signac(args$input_path)
-write.csv(reducedDim(signac, "LSI"),
-          file.path(args$output_path, "Signac.csv"))
-rm(signac)
-gc()
-print("Done with signac")
-
-cis <- process_cistopic(args$input_path)
-write.csv(reducedDim(cis, "cisTopic"),
-          file.path(args$output_path, "cisTopic.csv"))
-rm(cis)
-gc()
-print("Done with cisTopic")
-
 pca_tpm <- process_pca(args$input_path)
 write.csv(reducedDim(pca_tpm, "pca"),
           file.path(args$output_path, "pca.csv"))
 rm(pca_tpm)
 gc()
 print("Done with PCA")
+
+#lsi <- process_lsi(args$input_path, 10)
+#write.csv(reducedDim(lsi, "lsi"),
+#          file.path(args$output_path, "LSI.csv"))
+#rm(lsi)
+#gc()
+#print("Done with LSI")
+#
+#signac <- process_signac(args$input_path)
+#write.csv(reducedDim(signac, "LSI"),
+#          file.path(args$output_path, "Signac.csv"))
+#rm(signac)
+#gc()
+#print("Done with signac")
+
+#snap <- process_snapatac(args$input_path)
+#write.csv(reducedDim(snap, "SnapATAC"),
+#          file.path(args$output_path, "SnapATAC.csv"))
+#rm(snap)
+#gc()
+#print("Done with SnapATAC")
+#
+#cis <- process_cistopic(args$input_path)
+#write.csv(reducedDim(cis, "cisTopic"),
+#          file.path(args$output_path, "cisTopic.csv"))
+#rm(cis)
+#gc()
+#print("Done with cisTopic")

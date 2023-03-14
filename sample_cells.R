@@ -26,6 +26,7 @@ create_sce <- function(path) {
 }
 
 save_sce <- function(path, sce) {
+	dir.create(path)
   writeMM(counts(sce), file.path(path, 'matrix.mtx'))
   write(colnames(sce), file.path(path, 'barcodes.tsv'))
   write.table(data.frame(rownames(sce))[c('rownames.sce.', 'rownames.sce.')],
@@ -59,15 +60,15 @@ n_cells = ncol(sce)
 # > set.seed(0)
 # > rnorm(1)
 #   1.26295428488079
-for (i in seq(500, n_cells, by=500)) {
-  # The seed is changed at each iteration because it would otherwise sample the same cells.
-  #
-  set.seed(i)
-  sampled_sce <- sce[, sample(ncol(sce), i, replace = FALSE)]
-  selection <- paste0('sampled_cell_n_', i, sep='')
-  path <- format_output_path(args$input_path, selection)
-  save_sce(path, sampled_sce)
-}
+#for (i in seq(500, n_cells, by=500)) {
+#  # The seed is changed at each iteration because it would otherwise sample the same cells.
+#  #
+#  set.seed(i)
+#  sampled_sce <- sce[, sample(ncol(sce), i, replace = FALSE)]
+#  selection <- paste0('sampled_cell_n_', i, sep='')
+#  path <- format_output_path(args$input_path, selection)
+#  save_sce(path, sampled_sce)
+#}
 
 for (i in seq(20, 99, by=20)) {
   set.seed(i)

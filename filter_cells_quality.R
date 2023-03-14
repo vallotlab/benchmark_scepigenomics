@@ -28,6 +28,7 @@ create_sce <- function(path) {
 }
 
 save_sce <- function(path, sce) {
+	dir.create(path)
   writeMM(counts(sce), file.path(path, 'matrix.mtx'))
   write(colnames(sce), file.path(path, 'barcodes.tsv'))
   write.table(data.frame(rownames(sce))[c('rownames.sce.', 'rownames.sce.')],

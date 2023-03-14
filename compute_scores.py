@@ -141,7 +141,7 @@ def evaluate_methods(gt_path: os.PathLike,
             os.path.join(embeddings_path, binsize, file), mode='r') as f:
           embeddings[name] = pd.read_csv(f, index_col=0)
 
-    if binsize[-1] == 'k' and ((binsize != 'PseudoBulk') and (binsize != 'SicerPseudoBulk')):
+    if binsize[-1] == 'k' and ((binsize != 'MacsPseudoBulk') and (binsize != 'SicerPseudoBulk')):
       binsize = int(binsize[:-1])
 
     if not embeddings:
@@ -167,10 +167,6 @@ def evaluate_methods(gt_path: os.PathLike,
         adata = adata[idx, :]
         logging.info('Starting to process the ADT matrix')
         adata = process_adt(adata)
-        #print(adata.obsm_keys)
-        #print(adata.obsm.dim_names) # type: ignore
-        #print(adata.obs_names) # type: ignore
-        #adata.obsm.dim_names = adata.obs_names # type: ignore
         logging.info('Built the ADT matrix')
 
     res = []

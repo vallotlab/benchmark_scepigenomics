@@ -54,17 +54,19 @@ def bins_from_annotation(adata: anndata.AnnData,
   new_adata.obs = adata.obs
   return new_adata
 
+
 def rename_coor(coor):
-  chrom, start, end = coor.split('_')
-  return f'{chrom}:{start}-{end}'
+  if len(coor.split('_')) == 3:
+    chrom, start, end = coor.split('_')
+    return f'{chrom}:{start}-{end}'
+  return coor
 
 
 def merge_bins(adata, bin_size):
   orig_bins = collections.defaultdict(list)
-  #adata.var_names = adata.var_names.map(rename_coor)
+  adata.var_names = adata.var_names.map(rename_coor)
   for coor in adata.var_names:
     chrom, start, end = coor.split(':')[0], int(coor.split(':')[1].split('-')[0]), int(coor.split(':')[1].split('-')[1])
-    #chrom, start, end = coor.split('_')[0], int(coor.split('_')[1]), int(coor.split('_')[2])
     orig_bins[chrom].append((start, end))
   logging.info('Done with counting the bins')
 
