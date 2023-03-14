@@ -201,6 +201,8 @@ time python3 compute_supervised_metrics.py '
 - All the scores are stored under `data/scores`.
 - All the runtime informations are stored in the `logs` folder.
 
+The analysis colab is `scCUTTag_analysis.ipynb`.
+
 # Original code
 
 This code is based on a fork of the work originally done at Google, whose source
