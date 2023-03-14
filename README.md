@@ -3,6 +3,8 @@
 This repository contains the code for benchmarking the quality of the
 representation of single-cell histone post translational modifications (scHPTM).
 
+This is the companion to [Raimundo, F., Prompsy, P., Vert, J.P. and Vallot, C., 2022. Best practices for single-cell histone modification analysis. bioRxiv, pp.2022-09.](https://www.biorxiv.org/content/10.1101/2022.09.21.508811v1).
+
 We evaluate the effect of the following factors:
 
 -   Matrix construction.
